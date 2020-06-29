@@ -25,7 +25,7 @@ def status_decorator(func):
     return wrapper
 def print_decorator(txt):
     #st.markdown('''----''')
-    st.markdown('<style>h2{color: red;}</style>', unsafe_allow_html=True)
+    st.markdown('<style>h2{color: blue;}</style>', unsafe_allow_html=True)
     st.markdown(f'''> ## {txt}''')
     #st.markdown('''----''')
     return

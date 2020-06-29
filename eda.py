@@ -34,10 +34,13 @@ from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 
-data_file = 'data/log.csv' # add options for uploading
+with st.spinner("Uploading"):
+    data_file = st.file_uploader('Data Set')
+    st.balloons()
+if not data_file:
+    data_file = 'data/log.csv' # add options for uploading
 # %% add file creation time
 date = time.ctime(os.path.getctime('eda.py'))
-
 st.markdown('''
 > # Exploratory Data Analysis
 ''')
@@ -90,8 +93,8 @@ st.pyplot()
 #imputer = IterativeImputer(random_state=0, max_iter=100)
 #df.loc[:, num_cols[0]] = imputer.fit_transform(df[num_cols[0]])
 
-# %% Fit to common distributions
 st.markdown(''' ## Checkout Data Distribution''')
+st.markdown('''### Categorical Columns''')
 cat_bar = make_subplots(rows=math.ceil(len(cat_cols[0])/3), cols=3)
 for i, cat in enumerate(cat_cols[0]):
     #st.dataframe((df[cat].value_counts()).transpose())
@@ -102,7 +105,7 @@ for i, cat in enumerate(cat_cols[0]):
         cat_bar.add_trace(go.Bar(x=['TOO MANY CATS'], y=[1.0]), row=i//3+1, col=i%3+1)
 
 st.plotly_chart(cat_bar)
-#select = 
+st.markdown('''### Numerical Columns''')
 select_row = st.selectbox('Show Columns', [*num_cols[0], 'Show All'], index=0)
 if select_row!='Show All':
     charts = plot_hist(df, select_row, classes, dep_var)
@@ -113,10 +116,14 @@ else:
         charts.extend(plot_hist(df, cols, classes, dep_var))
     out = facet_wrap(charts, 3)
     st.altair_chart(out)
-    
+
+st.markdown('''### Apply Data Transformations''')
+st.markdown('''#### Does transforming the data provide a better understanding or fit to your expected distributions?''')
 transforms = st.selectbox('Transform Data', list(transformer.keys()))
 df.loc[:, num_cols[0]] = tform(df[num_cols[0]], transforms)
 df
+st.markdown('''> ### View transformed data ''')
+st.markdown('''### Allows comparison of various columns side-by-side''')
 ### Using boxplot, violin plot, density plot and cumulative plot
 log=False
 if st.checkbox('Log-scale'):
@@ -127,6 +134,7 @@ st.plotly_chart(fig1)
 st.plotly_chart(fig2)
 
 # compare classes
+st.markdown('''> ## Compare distributions of two target classes''')
 cls1 = st.selectbox('Class ID 1', classes, index=0)
 cls2 = st.selectbox('Class ID 2', classes, index=1)
 fig1 = box_plot(df[df[dep_var]==cls1], num_cols[0])
@@ -134,17 +142,21 @@ fig2 = box_plot(df[df[dep_var]==cls2], num_cols[0])
 st.plotly_chart(fig1)
 st.plotly_chart(fig2)
 
+st.markdown('''> ## Data Topology
+> ### This represents our high-dimensional data on a 2D plane as a network
+> ### Colors represent the class labels and this provides a new view''')
 ## mapper and t-sne for topology views and outlier detection
 map = plot_mapper(df[num_cols[0]], df[dep_var].values)
 st.plotly_chart(map)
 
 #%% correlations 
-# among columns
-# with the dependent variable (LDA)
+st.markdown('''## Check correlations between the columns ''')
+st.markdown('''### Let us go further than the standard correlation and view the Predicability Power Score (very informative)''')
 pps_cache = st.cache(pps.matrix)
 corr = pps_cache(df)
 corr
-corr_fig = make_subplots(rows=1, cols=2)
+
+corr_fig = make_subplots(rows=1, cols=2, subplot_titles=('PPS','Standard Correlation'))
 corr_fig.add_trace(go.Heatmap(z=corr, x=columns, y=columns,
 coloraxis='coloraxis'), row=1, col=1)
 corr_fig.add_trace(go.Heatmap(z=df[num_cols[0]].corr(), x=num_cols[0],y=None,
@@ -153,15 +165,32 @@ corr_fig.update_layout(coloraxis={'colorscale':'jet'})
 st.plotly_chart(corr_fig)
 
 #%% modeling
+st.markdown('''## Let us build simple models''')
 classifiers = [
-    SVC(kernel="linear", C=0.025),
-    SVC(gamma=2, C=1),
-    RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1),
-    MLPClassifier(alpha=1, max_iter=1000),
-    AdaBoostClassifier(),
-    GaussianNB(),]
+    'SVC','RandomForest', 'MLPClassifier', 'GaussianNB']
 
-model = st.sidebar.selectbox('Models', classifiers, index=0)
+model_select = st.sidebar.selectbox('Models', classifiers, index=0)
+
+if 'MLP' in model_select:
+    nlayer = st.sidebar.slider('# of Layers', 1, 10, 4)
+    node_i = []
+    for i in range(1, nlayer):
+        node_i.append(st.sidebar.slider(f'nodes in layer {i}', 1, 100, 10))
+    model = MLPClassifier(alpha=1, max_iter=1000, hidden_layer_sizes=node_i)
+if 'RandomForest' in model_select:
+    n_estimators = st.sidebar.slider('# of estimators', 100, 500, 100)
+    crit = st.sidebar.selectbox('Criterion', ['gini', 'entropy'], index=0)
+    max_features = st.sidebar.selectbox('Max_features', ['auto', 'log2', 'sqrt'], index=0)
+    max_depth = st.sidebar.slider('max_depth',1, 100, None)
+    class_weight = st.sidebar.selectbox('Criterion', ['balanced', 'balanced_subsample'], index=1)
+    model = RandomForestClassifier(max_depth=max_depth, n_estimators=n_estimators, 
+    class_weight=class_weight, max_features=max_features)
+if 'SVC' in model_select:
+    lam=st.sidebar.slider('C', 0.0, 1.0, 0.01)
+    model=SVC(C=lam)
+
+if 'GaussianNB' in model_select:
+    model = GaussianNB()
 
 dep_cols = st.multiselect('Independent Variables', columns, num_cols[0])
 
@@ -186,12 +215,11 @@ clf.fit(X_train, y_train)
 st.write(clf.score(X_test, y_test))
 
 
-if 'MLPClassifier' in model.__repr__():
-    nlayer = st.sidebar.slider('# of Layers', 1, 10)
-    node_i = []
-    for i in range(1, nlayer):
-        node_i.append(st.sidebar.slider(f'nodes in layer {i}', 1, 100))
-#  GLM, xgboost, MLP
+
+# clean code
+# test an other data-set
+# drop missing
+# LIME ?
 # STOP HERE
 
 
