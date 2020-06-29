@@ -12,3 +12,4 @@ References:
 1. [Predictive Power Score](https://github.com/8080labs/ppscore)
 2. [Mapper Algorithm](https://arxiv.org/abs/2004.02551)
 3. [Streamlit](https://github.com/streamlit/streamlit)
+4. [D-Tale](https://github.com/man-group/dtale)
