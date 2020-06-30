@@ -1,4 +1,4 @@
-# A Simple Data Exploratory App using Streamlit
+> # A Simple Data Exploratory App using Streamlit
 
 1. Provides interactive tools to explore data, normalize, scale and view outliers
 
@@ -14,7 +14,7 @@
 + Upload your favorite csv file
 + Check out  
 
-## Features 
+> ## Features 
 
 1. File upload
     + Upload your favorite csv file with categorical and numerical columns
@@ -35,15 +35,18 @@
     + Additional models can be added rather trivially in modeling.py
 8. Allows tuning of your model and outputs a simple performance score on the test dataset
 
-## Intented Usage
+> ## Intented Usage
 
 1. I often, found exploring a new dataset quite cumbersome and repetititve, so I decided to write a simple app to save me time and make the process more enjoyable.
 2. Also, I wanted to try out Streamlit. Streamlit is quite amazing and there is a lot more features we can look forward too!
 3. This is built purely for personal use and might not work for everyone but I intend to add more features as I go!
 
-* Snapshots
+> # Snapshots
+
 ![Snap1](images/top.PNG)
+- - - - 
 ![Snap2](images/top_regression.PNG)
+- - - - 
 ![Snap3](images/mid_regression.PNG)
 
 References:
