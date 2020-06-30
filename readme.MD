@@ -42,9 +42,9 @@
 3. This is built purely for personal use and might not work for everyone but I intend to add more features as I go!
 
 * Snapshots
-![Snap1](images/top.png)
-![Snap2](images/top_regression.png)
-![Snap3](images/mid_regression.png)
+![Snap1](images/top.PNG)
+![Snap2](images/top_regression.PNG)
+![Snap3](images/mid_regression.PNG)
 
 References:
 
