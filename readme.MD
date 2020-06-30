@@ -1,4 +1,4 @@
-> # A Simple Data Exploratory App using Streamlit
+# A Simple Data Exploratory App using Streamlit
 
 1. Provides interactive tools to explore data, normalize, scale and view outliers
 
@@ -8,13 +8,14 @@
 
 4. The script is deployed as an app @ https://arcane-headland-76563.herokuapp.com/
 
-## Usage Description
+> ## Usage Description
+
 + Install streamlit, pps_score, giotto-tda, D-Tale, Missingno and other dependencies
 + Run as ```streamlit run eda.py```
 + Upload your favorite csv file
 + Check out  
 
-> ## Features 
+> ## Features
 
 1. File upload
     + Upload your favorite csv file with categorical and numerical columns
@@ -40,8 +41,9 @@
 1. I often, found exploring a new dataset quite cumbersome and repetititve, so I decided to write a simple app to save me time and make the process more enjoyable.
 2. Also, I wanted to try out Streamlit. Streamlit is quite amazing and there is a lot more features we can look forward too!
 3. This is built purely for personal use and might not work for everyone but I intend to add more features as I go!
+4. I took some inspiration from pandas-profile and sweetviz and added what I thought was missing!
 
-> # Snapshots
+> ## Snapshots
 
 ![Snap1](images/top.PNG)
 - - - - 
