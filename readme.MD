@@ -17,9 +17,9 @@
 ## Features
 1. 
 * Snapshots
-![Snap1](top.png)
-![Snap2](top_regression.png)
-![Snap3](mid_regression.png)
+![Snap1](images/top.PNG)
+![Snap2](images/top_regression.PNG)
+![Snap3](images/mid_regression.PNG)
 References:
 
 * [Predictive Power Score](https://github.com/8080labs/ppscore)
