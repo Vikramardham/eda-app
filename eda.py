@@ -1,231 +1,130 @@
-import numpy as np 
-import pandas as pd 
-import dtale
-import streamlit as st 
-import altair as alt
-import seaborn as sns
-from plotly.subplots import make_subplots
-import plotly.graph_objects as go
-import plotly.express as px
-import missingno as msno
-import sys 
-import os
-import time
-import math
-from utils import *
-from transform import *
-from sklearn.model_selection import train_test_split
-from sklearn.experimental import enable_iterative_imputer
-from sklearn.impute import IterativeImputer
-from sklearn.linear_model import BayesianRidge
-from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import OneHotEncoder
-from sklearn.compose import make_column_selector
-from sklearn.pipeline import Pipeline
+from imports import *
 
-import ppscore as pps
-from sklearn.neural_network import MLPClassifier
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.svm import SVC
-from sklearn.gaussian_process import GaussianProcessClassifier
-from sklearn.gaussian_process.kernels import RBF
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
-from sklearn.naive_bayes import GaussianNB
-from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
-
-with st.spinner("Uploading"):
-    data_file = st.file_uploader('Data Set')
-    st.balloons()
-if not data_file:
-    data_file = 'data/log.csv' # add options for uploading
-# %% add file creation time
-date = time.ctime(os.path.getctime('eda.py'))
 st.markdown('''
-> # Exploratory Data Analysis
-''')
-st.write(date)
+# <div class="alert alert-success" role="alert"> Exploratory Data Analysis</div>
+''', unsafe_allow_html=True)
 
-#show_image('bg.jpg', caption='Background')
-#%% side bar
-nrows = st.sidebar.slider('# of rows', min_value=100, max_value=10000, value=1000) 
-## chose proper min and max row values automatically
-df_raw = read_dat(data_file, nrows=nrows)
-df = df_raw.copy(deep=True)
+#### Upload a CSV datafile ####
+data_file = st.file_uploader('Upload CSV')   
+# if nothing is upload, a default file is used (a credit fraud dataset from Kaggle) ####
+if not data_file:
+    data_file = 'data/log.csv' 
+
+#### Choose number of rows to read in the datafile ####
+nrows = st.sidebar.slider('# of Samples to Read', min_value=1000, max_value=20000, value=1000) 
+df_raw = read_dat(data_file, nrows=nrows) 
+df = df_raw.copy(deep=True) # make a copy for better caching
+df.columns = [re.sub(r'"', '', col) for col in df.columns] # remove quotes in column names (if they exist)
 columns = df.columns.values.tolist()
 
+#### Choose dependent variable, default = <last column> and the type of Problem  #### 
 dep_var = st.sidebar.selectbox('Dependent Variable', columns, index=len(columns)-1)
 prob_type = st.sidebar.checkbox('Regression Problem?')
 
-print_decorator('Class Distribution')
-if not prob_type:
-    classes = df[dep_var].unique()
-    balance = df[dep_var].value_counts()
-sns.countplot(df[dep_var])
-st.pyplot()
+#### Check the distribution of Output (to see how imbalanced the data is)
+class_dist(df, dep_var, prob_type)
+##### D-Tale app provides nice features to look at the data, check it out!
+dtale_app.JUPYTER_SERVER_PROXY = True
 
-# %%
-st.write(':sunglasses:')
 if st.checkbox('Show DTale'):
+    st.markdown('''### Does not work on Heroku (yet!)''')
     d = dtale.show(df, ignore_duplicate=True)
-    st.write(f'<a target=\"_blank\" href=\"//vrapc:40000/dtale/main/1\">Dtale</a>',  unsafe_allow_html=True)
-st.write(':sunglasses:')
-# %%
-st.markdown(''' > ## Types of Columns''')
-st.write(df.dtypes)
+    st.write(f'<a target=\"_blank\" href=\"{d._main_url}\">Dtale</a>',  unsafe_allow_html=True)
+
+#### 
+st.markdown(''' > ## Data Types of Columns''')
+st.write(pd.DataFrame(df.dtypes, columns=['Data Type']).T)
 col_types, num_cols, cat_cols = get_dtypes(df)
-#st.write('Numerical Columns')
-#st.write(num_cols[0])
-#st.write('categorical Columns')
-#st.write(cat_cols[0])
-#st.write(col_types['float'])
-#st.write(col_types['object'])
-#df_cols = pd.concat([pd.DataFrame(num_cols, index=['Numerical']), 
-#pd.DataFrame(cat_cols, index=['Categorical'])])
-#st.write(df_cols)
-# %% altair plots for missing values and nans
-st.markdown('> ## Missing Values')
+
+### Take a look at missing data
+st.markdown('> ## Missing Data')
 msno.matrix(df)
 st.pyplot()
-#%%
-# what do with the missing data?
-#st.write(df.isna())
-#imputer = IterativeImputer(random_state=0, max_iter=100)
-#df.loc[:, num_cols[0]] = imputer.fit_transform(df[num_cols[0]])
 
-st.markdown(''' ## Checkout Data Distribution''')
-st.markdown('''### Categorical Columns''')
-cat_bar = make_subplots(rows=math.ceil(len(cat_cols[0])/3), cols=3)
-for i, cat in enumerate(cat_cols[0]):
-    #st.dataframe((df[cat].value_counts()).transpose())
-    unique, popular, counts = summarize_cat(df[cat])
-    if len(popular) > 1:
-        cat_bar.add_trace(go.Bar(x=popular.index, y=popular.values), row=i//3+1, col=i%3+1)
-    else:
-        cat_bar.add_trace(go.Bar(x=['TOO MANY CATS'], y=[1.0]), row=i//3+1, col=i%3+1)
+#### Just drop missing data 
+#### May need a better strategy for Modeling
+df.dropna(inplace=True)
+
+st.markdown('''> ## Checkout Data Distribution
+>> ### Categorical Data''')
+if st.checkbox('Choose Custom Categorical Columns'):
+    cat_cols_new = st.multiselect('Choose Categorical Columns', cat_cols, default=cat_cols)
+    num_cols = num_cols + [cat for cat in cat_cols if cat not in cat_cols_new]
+    cat_cols = cat_cols_new
+cat_bar = cat_dist(df, cat_cols)
+
 
 st.plotly_chart(cat_bar)
-st.markdown('''### Numerical Columns''')
-select_row = st.selectbox('Show Columns', [*num_cols[0], 'Show All'], index=0)
-if select_row!='Show All':
-    charts = plot_hist(df, select_row, classes, dep_var)
-    st.altair_chart(alt.hconcat(*charts))
-else:
-    charts = []
-    for cols in num_cols[0]:
-        charts.extend(plot_hist(df, cols, classes, dep_var))
-    out = facet_wrap(charts, 3)
-    st.altair_chart(out)
 
-st.markdown('''### Apply Data Transformations''')
-st.markdown('''#### Does transforming the data provide a better understanding or fit to your expected distributions?''')
-transforms = st.selectbox('Transform Data', list(transformer.keys()))
-df.loc[:, num_cols[0]] = tform(df[num_cols[0]], transforms)
-df
-st.markdown('''> ### View transformed data ''')
-st.markdown('''### Allows comparison of various columns side-by-side''')
-### Using boxplot, violin plot, density plot and cumulative plot
-log=False
-if st.checkbox('Log-scale'):
-    log=True
-fig1 = box_plot(df, num_cols[0])
-fig2 = plotly_hist(df, num_cols[0], log=log)
+#### Transform and View Numerical Data
+transforms = st.selectbox('Apply Transformation', list(transformer.keys()))
+fig1, fig2 = num_dist(df, num_cols, transforms)
+st.markdown('''> ### Numerical Data ''')
 st.plotly_chart(fig1)
 st.plotly_chart(fig2)
 
-# compare classes
-st.markdown('''> ## Compare distributions of two target classes''')
-cls1 = st.selectbox('Class ID 1', classes, index=0)
-cls2 = st.selectbox('Class ID 2', classes, index=1)
-fig1 = box_plot(df[df[dep_var]==cls1], num_cols[0])
-fig2 = box_plot(df[df[dep_var]==cls2], num_cols[0])
-st.plotly_chart(fig1)
-st.plotly_chart(fig2)
+#### Compare a couple of classes and their data distributions
+if not prob_type:
+    COMPARE_CLASSES=st.checkbox('Compare Classes')
+    if COMPARE_CLASSES:
+        st.markdown('''> ## Compare distributions of two target classes''')
+        classes = df[dep_var].unique()
+        cls1 = st.selectbox('Class ID 1', classes, index=0)
+        cls2 = st.selectbox('Class ID 2', classes, index=1)
+        
+        fig1 = box_plot(df[df[dep_var]==cls1], num_cols)
+        fig1.update_layout(title='Class #1')
+        fig2 = box_plot(df[df[dep_var]==cls2], num_cols)
+        fig2.update_layout(title='Class #2')
+        
+        st.plotly_chart(fig1)
+        st.plotly_chart(fig2)
 
-st.markdown('''> ## Data Topology
-> ### This represents our high-dimensional data on a 2D plane as a network
-> ### Colors represent the class labels and this provides a new view''')
-## mapper and t-sne for topology views and outlier detection
-map = plot_mapper(df[num_cols[0]], df[dep_var].values)
-st.plotly_chart(map)
+#### Check out the data topology using the fancy Mapper algorithm
 
-#%% correlations 
-st.markdown('''## Check correlations between the columns ''')
-st.markdown('''### Let us go further than the standard correlation and view the Predicability Power Score (very informative)''')
-pps_cache = st.cache(pps.matrix)
-corr = pps_cache(df)
-corr
+SHOW_TOPOLOGY=st.checkbox('Show Data Topology Graph')
+if SHOW_TOPOLOGY:
+    st.markdown('''> ## Data Topology
+    >> ### This represents our high-dimensional data on a 2D plane as a network''')
+    
+    if not prob_type:
+        map = plot_mapper(df[num_cols], df[dep_var].astype('category').cat.codes)
+    else:
+        map = plot_mapper(df[num_cols+[dep_var]], color=None)
+    st.plotly_chart(map)
 
-corr_fig = make_subplots(rows=1, cols=2, subplot_titles=('PPS','Standard Correlation'))
-corr_fig.add_trace(go.Heatmap(z=corr, x=columns, y=columns,
-coloraxis='coloraxis'), row=1, col=1)
-corr_fig.add_trace(go.Heatmap(z=df[num_cols[0]].corr(), x=num_cols[0],y=None,
- coloraxis='coloraxis'), row=1, col=2)
-corr_fig.update_layout(coloraxis={'colorscale':'jet'})
+#### Take a look at PPS and Standard correlation between various columns
+#### Standard correlation is only defined for numerical data
+st.markdown('''> ## Check correlations between the columns 
+>> ### Let us go beyond standard correlation and view the Predicability Power Score''')
+corr_fig = pps_plot(df, columns, num_cols)
 st.plotly_chart(corr_fig)
 
-#%% modeling
-st.markdown('''## Let us build simple models''')
-classifiers = [
-    'SVC','RandomForest', 'MLPClassifier', 'GaussianNB']
+#### Perform Basic Modeling for better Understanding of the data
 
-model_select = st.sidebar.selectbox('Models', classifiers, index=0)
+BUILD_MODEL=st.checkbox('Build Models?')
 
-if 'MLP' in model_select:
-    nlayer = st.sidebar.slider('# of Layers', 1, 10, 4)
-    node_i = []
-    for i in range(1, nlayer):
-        node_i.append(st.sidebar.slider(f'nodes in layer {i}', 1, 100, 10))
-    model = MLPClassifier(alpha=1, max_iter=1000, hidden_layer_sizes=node_i)
-if 'RandomForest' in model_select:
-    n_estimators = st.sidebar.slider('# of estimators', 100, 500, 100)
-    crit = st.sidebar.selectbox('Criterion', ['gini', 'entropy'], index=0)
-    max_features = st.sidebar.selectbox('Max_features', ['auto', 'log2', 'sqrt'], index=0)
-    max_depth = st.sidebar.slider('max_depth',1, 100, None)
-    class_weight = st.sidebar.selectbox('Criterion', ['balanced', 'balanced_subsample'], index=1)
-    model = RandomForestClassifier(max_depth=max_depth, n_estimators=n_estimators, 
-    class_weight=class_weight, max_features=max_features)
-if 'SVC' in model_select:
-    lam=st.sidebar.slider('C', 0.0, 1.0, 0.01)
-    model=SVC(C=lam)
+if BUILD_MODEL:
 
-if 'GaussianNB' in model_select:
-    model = GaussianNB()
+    st.markdown('''> ## Let us build simple models''')
+    dep_cols = st.sidebar.multiselect('Independent Variables', columns, columns[:-1])
+    classifiers = [ 'SVM', 'RandomForest', 'MLP']
+    model_select = st.sidebar.selectbox('Models', classifiers, index=0)
 
-dep_cols = st.multiselect('Independent Variables', columns, num_cols[0])
+    modeling=Model(model_select, prob_type)
 
-steps = [('scale', transformer[transforms],
-                        make_column_selector(dtype_include=np.number))
-                        ]
-for cat in cat_cols[0]:
-    #st.write(df[cat].values.tolist())
-    if cat in dep_cols:
-        steps.append((cat, topk_encoder(df[cat].values.tolist(), 10), [dep_cols.index(cat)]))
+    X = df[dep_cols]
+    y = df[dep_var]
 
-pre_process = ColumnTransformer(steps)
+    if not prob_type:
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=.2, random_state=42, stratify=y)
+    else:
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=.2, random_state=42)
 
-clf = Pipeline(steps=[('preprocessor', pre_process), 
-                        ('classify', model)])
+    clf = modeling.pipe(df, transforms, cat_cols, num_cols, dep_cols).fit(X, y)
 
-X = df[dep_cols]
-y = df[dep_var]
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=.2, random_state=42, stratify=y)
-clf.fit(X_train, y_train)
+    st.write('Score on the Test Data', clf.score(X_test, y_test))
 
-st.write(clf.score(X_test, y_test))
-
-
-
-# clean code
-# test an other data-set
-# drop missing
-# LIME ?
 # STOP HERE
 
-
-# FUTURE 
-# dimensionality reduction
-# guess the distribution of data 
-# interactions of variables toward output prediction 
-# ensemble (hybrid) models 
-# Naive-Bayes, SVM
+st.balloons()

@@ -11,6 +11,9 @@ from gtda.mapper.visualization import plot_static_mapper_graph, plot_interactive
 from sklearn.cluster import DBSCAN
 from PIL import Image
 
+st.markdown('<style>h2{color: blue;}</style>', unsafe_allow_html=True)
+st.markdown('<style>h3{color: green;}</style>', unsafe_allow_html=True)
+
 def show_image(image, caption=None, width=500):
     img = Image.open(image)
     st.image(img, caption=caption, use_column_width=False, width=width)
@@ -26,17 +29,18 @@ def status_decorator(func):
 def print_decorator(txt):
     #st.markdown('''----''')
     st.markdown('<style>h2{color: blue;}</style>', unsafe_allow_html=True)
+    st.markdown('<style>h3{color: green;}</style>', unsafe_allow_html=True)
     st.markdown(f'''> ## {txt}''')
     #st.markdown('''----''')
     return
 
 @status_decorator
-@st.cache
+@st.cache(allow_output_mutation=True)
 def read_dat(data_file, sep=None, nrows=100, **kwargs):
     if not sep:
-        sep='\s|\t|,|;'
+        sep='\t|,|;'
     else:
-        sep=sep+'|'+'\s|\t|,|;'
+        sep=sep+'|'+'\t|,|;'
     return pd.read_csv(data_file, sep=sep, nrows=nrows, engine='python', **kwargs)
 
 def get_dtypes(df):
@@ -54,12 +58,18 @@ def get_dtypes(df):
 
     for key, val in cols.items():
         if key == 'float64':
-            num_cols.append(val)
+            num_cols.extend(val)
+        elif key == 'int64':
+            for cat in val:
+                unique = len(df[cat].unique())/len(df[cat])
+                if unique > 0.1 or len(df[cat].unique())>100:
+                    num_cols.append(cat)
+                else:
+                    cat_cols.append(cat)
         if key == 'object':
-            cat_cols.append(val)
+            cat_cols.extend(val)
     return cols, num_cols, cat_cols
 
-@st.cache
 def plot_hist(df, select_row, classes, dep_var):
     c1=[]
     c2=[]
@@ -78,14 +88,14 @@ def plot_hist(df, select_row, classes, dep_var):
     return [c1, c2, c3]
 
 # make a single row
-@st.cache
+
 def make_hcc(row_of_charts):
     hconcat = [chart for chart in row_of_charts]
     hcc = alt.HConcatChart(hconcat=hconcat, bounds='flush', spacing=40.)
     return hcc
 
 # take an array of charts and produce a facet grid
-@st.cache
+
 def facet_wrap(charts, charts_per_row):
     rows_of_charts = [
         charts[i:i+charts_per_row] 
@@ -95,7 +105,7 @@ def facet_wrap(charts, charts_per_row):
       .configure_axisX(grid=True)\
       .configure_axisY(grid=True)
     return vcc
-@st.cache
+
 def box_plot(df, cols):
     fig = go.Figure()
     for col in cols:
@@ -103,13 +113,18 @@ def box_plot(df, cols):
                             name=col,
                             box_visible=True,
                             meanline_visible=True))
+    fig.update_layout(title='Box and Violin Plots')
     return fig
-@st.cache
+    
+
 def plotly_hist(df, cols, log=False):
     fig = ff.create_distplot([df[c] for c in cols], cols , bin_size=.2)
     if log:
-        fig.update_layout(xaxis_type="log", yaxis_type="log")
+        fig.update_layout(xaxis_type="log", yaxis_type="log", title='Histogram/Density Plot')
+    else:
+        fig.update_layout(title='Histogram/Density Plot')
     return fig
+
 @st.cache
 def plot_mapper(df, color):
     pipeline = make_mapper_pipeline(
@@ -117,7 +132,9 @@ def plot_mapper(df, color):
         cover=OneDimensionalCover(),
         clusterer=DBSCAN(),
     )
-    return plot_static_mapper_graph(pipeline, df.values, color_variable=color)
+    return plot_static_mapper_graph(pipeline, df.values, layout_dim=2, 
+    color_variable=color, color_by_columns_dropdown=True)
+
 @st.cache
 def summarize_cat(series):
     counts = series.value_counts()
