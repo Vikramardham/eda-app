@@ -42,8 +42,8 @@
 
 > ## Intented Usage
 
-1. I often, found exploring a new dataset quite cumbersome and repetititve, so I decided to write a simple app to save me time and make the process more enjoyable.
-2. Also, I wanted to try out Streamlit (3). Streamlit is quite amazing and there is a lot more features we can look forward too!
+1. I often find exploring a new dataset quite cumbersome and repetititve, so I decided to write a simple app to save time and make the process more enjoyable.
+2. Also, I wanted to try out Streamlit (3). Streamlit is quite amazing and there is a lot more features we can look forward to!
 3. This is built purely for personal use and might not work for everyone but I intend to add more features as I go!
 4. I took some inspiration from pandas-profile and sweetviz and added what I thought was missing!
 
